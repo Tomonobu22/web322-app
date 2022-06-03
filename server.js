@@ -33,7 +33,7 @@ app.get('/blog',(req, res) => {
     blog.getPublishedPosts().then((data) => {
         res.send(data)
     }).catch((err) => {
-        res.send(err)
+        res.send({message: err})
     })
 })
 
@@ -42,7 +42,7 @@ app.get('/posts',(req, res) => {
     blog.getAllPosts().then((data) => {
         res.send(data)
     }).catch((err) => {
-        res.send(err)
+        res.send({message: err})
     })
 })
 
@@ -51,7 +51,7 @@ app.get('/categories',(req, res) => {
     blog.getCategories().then((data) => {
         res.send(data)
     }).catch((err) => {
-        res.send(err)
+        res.send({message: err})
     })
 })
 
