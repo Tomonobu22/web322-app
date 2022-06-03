@@ -15,7 +15,7 @@ var app = express()
 var path = require("path");
 const { getEnabledCategories } = require('trace_events');
 
-var PORT = process.eventNames.PORT || 8080
+var PORT = process.env.PORT || 8080
 app.use(express.static('public'))
 
 app.get('/',(req, res) => { 
