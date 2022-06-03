@@ -4,9 +4,9 @@
 * No part of this assignment has been copied manually or electronically from any other source
 * (including web sites) or distributed to other students.
 *
-* Name: Tomonobu Christian Fukuhara Tengan Student ID: 123475212 Date: May 30, 2022
+* Name: Tomonobu Christian Fukuhara Tengan Student ID: 123475212 Date: Jun 03, 2022
 *
-* Online (Heroku) URL: https://afternoon-fortress-15422.herokuapp.com/
+* Online (Heroku) URL: https://guarded-inlet-93508.herokuapp.com/
 *
 ********************************************************************************/
 var blog = require('./blog-service')
