@@ -33,7 +33,7 @@ function getAllPosts() {
 function getPublishedPosts() {
     return new Promise((resolve, reject) => {
         if(posts.length > 0) {
-            posts = []
+            published = []
             for(let i = 0; i < posts.length; i++){
                 if(posts[i].published)
                 published.push(posts[i])
