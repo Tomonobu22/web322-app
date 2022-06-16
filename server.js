@@ -77,18 +77,9 @@ app.get('/posts',(req, res) => {
     }
 })
 
-app.use('/posts/:id', (req, res, next) => {
-    var id = req.params.id
-    if(id == "add"){
-        res.sendFile(path.join(__dirname,"/views/addPost.html"))
-    }
-    else {
-        blog.getPostById(id).then((data) => {
-            res.send(data)
-        }).catch((err) => {
-            res.send({message: err})
-        })
-    }
+
+app.get('/posts/add', (req, res) => {
+    res.sendFile(path.join(__dirname,"/views/addPost.html"))
 })
 
 app.get('/categories',(req, res) => {
@@ -107,18 +98,18 @@ app.post('/posts/add', upload.single('featureImage'), (req, res) => {
     let streamUpload = (req) => {
         return new Promise((resolve, reject) => {
             let stream = cloudinary.uploader.upload_stream(
-            (error, result) => {
-                if (result) {
-                    resolve(result);
-                } else {
-                    reject(error);
+                (error, result) => {
+                    if (result) {
+                        resolve(result);
+                    } else {
+                        reject(error);
+                    }
                 }
-            }
-        );
-        streamifier.createReadStream(req.file.buffer).pipe(stream);
-        });
-    };
-
+                );
+                streamifier.createReadStream(req.file.buffer).pipe(stream);
+            });
+        };
+        
     async function upload(req) {
         let result = await streamUpload(req);
         console.log(result);
@@ -131,15 +122,22 @@ app.post('/posts/add', upload.single('featureImage'), (req, res) => {
         }).catch(()=>{
             console.log('No results returned');
         })
-    // TODO: Process the req.body and add it as a new Blog Post before redirecting to/posts
+        // TODO: Process the req.body and add it as a new Blog Post before redirecting to/posts
+    })
+})
+
+app.use('/posts/:id', (req, res, next) => {
+    var id = req.params.id
+    blog.getPostById(id).then((data) => {
+        res.send(data)
+    }).catch((err) => {
+        res.send({message: err})
     })
 })
 
 app.use((req, res) => {
     res.status(404).redirect('/error')
 })
-
-
 
 blog.intialize().then(()=> {
     app.listen(PORT, () => {
