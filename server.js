@@ -6,7 +6,7 @@
 *
 * Name: Tomonobu Christian Fukuhara Tengan Student ID: 123475212 Date: Jun 16, 2022
 *
-* Online (Heroku) URL: 
+* Online (Heroku) URL: https://guarded-inlet-93508.herokuapp.com/
 *
 ********************************************************************************/
 var blog = require('./blog-service')
@@ -78,12 +78,17 @@ app.get('/posts',(req, res) => {
 })
 
 app.use('/posts/:id', (req, res, next) => {
-    var id = req.params.id;
-    blog.getPostById(id).then((data) => {
-        res.send(data)
-    }).catch((err) => {
-        res.send({message: err})
-    })
+    var id = req.params.id
+    if(id == "add"){
+        res.sendFile(path.join(__dirname,"/views/addPost.html"))
+    }
+    else {
+        blog.getPostById(id).then((data) => {
+            res.send(data)
+        }).catch((err) => {
+            res.send({message: err})
+        })
+    }
 })
 
 app.get('/categories',(req, res) => {
@@ -92,10 +97,6 @@ app.get('/categories',(req, res) => {
     }).catch((err) => {
         res.send({message: err})
     })
-})
-
-app.get('/posts/add',(req, res) => {
-    res.sendFile(path.join(__dirname,"/views/addPost.html"))
 })
 
 app.get('/error', (req, res) => {
