@@ -4,6 +4,7 @@ let categories = []
 let published = []
 let posts_cat = []
 let posts_dt = []
+let post_pub_cat = []
 
 function intialize() {   
     return new Promise((resolve, reject) => {
@@ -46,6 +47,20 @@ function getPublishedPosts() {
     })  
 }
 
+function getPublishedPostsByCategory(category){
+    return new Promise((resolve, reject) => {
+        if(posts.length > 0) {
+            post_pub_cat = []
+            for(let i = 0; i < posts.length; i++){
+                if(posts[i].published && posts[i].category == category)
+                post_pub_cat.push(posts[i])
+            }
+        }
+        if(post_pub_cat.length > 0) resolve(post_pub_cat)
+        else reject('No results returned')
+    })  
+}
+
 function getCategories() {
     return new Promise((resolve, reject) => {
         if(categories.length > 0) resolve(categories)
@@ -59,7 +74,12 @@ function addPost(postData) {
             postData.published = false;
         } else postData.published = true;
         postData.id = posts.length + 1;
-        posts[posts.length] = postData;
+        let cd = new Date()
+        let mon = cd.getMonth() + 1 > 9 ? cd.getMonth() + 1 : '0' + (cd.getMonth()+1)
+        let day = cd.getDate() > 9 ? cd.getDate() : '0' + cd.getDate()
+        let dateStr = cd.getFullYear() + "-" + mon + "-" + day
+        postData.postDate = dateStr //"2020-02-25" Format
+        posts[posts.length] = postData
         resolve(postData)
     }) 
 }
@@ -110,7 +130,7 @@ function getPostById(id){
     })  
 }
 
-module.exports = {intialize,getAllPosts,getPublishedPosts,getCategories, addPost, getPostsByCategory, getPostsByMinDate, getPostById}
+module.exports = {intialize,getAllPosts,getPublishedPosts,getCategories, addPost, getPostsByCategory, getPostsByMinDate, getPostById, getPublishedPostsByCategory}
 
 // intialize().then(data => {
 //     console.log(data)
