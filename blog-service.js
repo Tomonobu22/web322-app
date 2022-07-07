@@ -70,7 +70,7 @@ function getCategories() {
 
 function addPost(postData) {
     return new Promise((resolve, reject) => {
-        if(postData.published != false && postData.published != true) {
+        if(postData.published != false && postData.published != true && postData.published != "on") {
             postData.published = false;
         } else postData.published = true;
         postData.id = posts.length + 1;
