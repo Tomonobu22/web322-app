@@ -1,10 +1,10 @@
 /*********************************************************************************
-* WEB322 – Assignment 4
+* WEB322 – Assignment 5
 * I declare that this assignment is my own work in accordance with Seneca Academic Policy.
 * No part of this assignment has been copied manually or electronically from any other source
 * (including web sites) or distributed to other students.
 *
-* Name: Tomonobu Christian Fukuhara Tengan Student ID: 123475212 Date: Jun 28, 2022
+* Name: Tomonobu Christian Fukuhara Tengan Student ID: 123475212 Date: July 21, 2022
 *
 * Online (Heroku) URL: https://guarded-inlet-93508.herokuapp.com/
 *
@@ -18,6 +18,8 @@ var path = require("path")
 const multer = require("multer")
 const cloudinary = require('cloudinary').v2
 const streamifier = require('streamifier')
+
+app.use(express.urlencoded({extended: true})); // to add categories
 
 // define the template engine of our express application
 app.engine('.hbs', exphbs.engine({
@@ -40,6 +42,12 @@ app.engine('.hbs', exphbs.engine({
         },
         safeHTML: function(context){
             return stripJs(context)
+        },
+        formatDate: function(dateObj){
+            let year = dateObj.getFullYear();
+            let month = (dateObj.getMonth() + 1).toString();
+            let day = dateObj.getDate().toString();
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2,'0')}`;
         }                  
     }
 }))
@@ -144,7 +152,8 @@ app.get('/blog/:id', async (req, res) => {
 
     try{
         // Obtain the post by "id"
-        viewData.post = await blog.getPostById(req.params.id);
+        let arrayPost = await blog.getPostById(req.params.id)
+        viewData.post = arrayPost[0]
     }catch(err){
         viewData.message = "no results"; 
     }
@@ -169,7 +178,7 @@ app.get('/posts',(req, res) => {
     var category = req.query.category;
     var minDateStr = req.query.minDate;
 
-    if(category > 0 && category < 6){
+    if(category >= 0){
         blog.getPostsByCategory(category).then((data) => {
             res.render("posts",{
                 posts: data
@@ -193,9 +202,16 @@ app.get('/posts',(req, res) => {
     }
     else {
         blog.getAllPosts().then((data) => {
-            res.render("posts",{
-                posts: data
-            })
+            if(data.length > 0){
+                res.render("posts",{
+                    posts: data
+                })
+            }
+            else {
+                res.render("posts",{
+                    message: "no results"
+                })
+            }
         }).catch((err) => {
             res.render("posts",{
                 message: "no results"
@@ -206,16 +222,53 @@ app.get('/posts',(req, res) => {
 
 
 app.get('/posts/add', (req, res) => {
-    res.render('addPost',{
+    blog.getCategories().then((data) => {
+        res.render('addPost',{
+            categories: data
+        })
+    }).catch(()=>{
+        res.render("addPost", {
+            categories: []
+        })
+    })
+})
+
+app.get('/categories/add', (req, res) => {
+    res.render('addCategory',{
         //options
+    })
+})
+
+app.get('/categories/delete/:id', (req, res) => {
+    var id = req.params.id
+    blog.deleteCategoryById(id).then(() => {
+        res.redirect('/categories')
+    }).catch((err) => {
+        res.status(500).redirect("Unable to RemoveCategory / Category not found)")
+    })
+})
+
+app.get('/posts/delete/:id', (req, res) => {
+    var id = req.params.id
+    blog.deletePostById(id).then(() => {
+        res.redirect('/posts')
+    }).catch((err) => {
+        res.status(500).redirect("Unable to RemovePost / Post not found)")
     })
 })
 
 app.get('/categories',(req, res) => {
     blog.getCategories().then((data) => {
-        res.render("categories",{
-            categories: data
-        })
+        if (data.length > 0){
+            res.render("categories",{
+                categories: data
+            })
+        }
+        else {
+            res.render("categories",{
+                message: "no results"
+            })
+        }
     }).catch((err) => {
         res.render("categories",{
             message: "no results"
@@ -229,7 +282,16 @@ app.get('/error', (req, res) => {
     }) 
 }) 
 
+app.post('/categories/add', (req, res) => {
+    blog.addCategory(req.body).then(() => {
+        res.redirect('/categories')
+    }).catch(()=>{
+        console.log('No results returned');
+    })
+})
+
 app.post('/posts/add', upload.single('featureImage'), (req, res) => {
+    if(req.file){
     let streamUpload = (req) => {
         return new Promise((resolve, reject) => {
             let stream = cloudinary.uploader.upload_stream(
@@ -247,7 +309,7 @@ app.post('/posts/add', upload.single('featureImage'), (req, res) => {
         
     async function upload(req) {
         let result = await streamUpload(req);
-        console.log(result);
+        //console.log(result);
         return result;
     }
     upload(req).then((uploaded)=> {
@@ -256,9 +318,19 @@ app.post('/posts/add', upload.single('featureImage'), (req, res) => {
             res.redirect('/posts')
         }).catch(()=>{
             console.log('No results returned');
+            res.redirect('/posts')
         })
         // TODO: Process the req.body and add it as a new Blog Post before redirecting to/posts
     })
+    }
+    else {
+        blog.addPost(req.body).then(() => {
+            res.redirect('/posts')
+        }).catch(()=>{
+            console.log('No results returned');
+            res.redirect('/posts')
+        })
+    }
 })
 
 app.use('/posts/:id', (req, res, next) => {
