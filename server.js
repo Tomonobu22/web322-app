@@ -1,15 +1,16 @@
 /*********************************************************************************
-* WEB322 – Assignment 5
+* WEB322 – Assignment 6
 * I declare that this assignment is my own work in accordance with Seneca Academic Policy.
 * No part of this assignment has been copied manually or electronically from any other source
 * (including web sites) or distributed to other students.
 *
-* Name: Tomonobu Christian Fukuhara Tengan Student ID: 123475212 Date: July 21, 2022
+* Name: Tomonobu Christian Fukuhara Tengan Student ID: 123475212 Date: August 04, 2022
 *
 * Online (Heroku) URL: https://guarded-inlet-93508.herokuapp.com/
 *
 ********************************************************************************/
 var blog = require('./blog-service')
+const authData = require('./auth-service')
 var express = require('express')
 const exphbs = require('express-handlebars')
 const stripJs = require('strip-js')
@@ -18,6 +19,15 @@ var path = require("path")
 const multer = require("multer")
 const cloudinary = require('cloudinary').v2
 const streamifier = require('streamifier')
+const clientSessions = require("client-sessions")
+
+// Setup client-sessions
+app.use(clientSessions({
+    cookieName: "session", // this is the object name that will be added to 'req'
+    secret: "week10example_web322", // this should be a long un-guessable string.
+    duration: 2 * 60 * 1000, // duration of the session in milliseconds (2 minutes)
+    activeDuration: 1000 * 60 // the session will be extended by this many ms each request (1 minute)
+  }));
 
 app.use(express.urlencoded({extended: true})); // to add categories
 
@@ -48,7 +58,7 @@ app.engine('.hbs', exphbs.engine({
             let month = (dateObj.getMonth() + 1).toString();
             let day = dateObj.getDate().toString();
             return `${year}-${month.padStart(2, '0')}-${day.padStart(2,'0')}`;
-        }                  
+        }            
     }
 }))
 app.set('view engine', '.hbs')
@@ -65,6 +75,22 @@ const { getEnabledCategories } = require('trace_events');
 
 var PORT = process.env.PORT || 8080
 app.use(express.static('public'))
+
+// helper middleware function that checks if a user is logged in
+function ensureLogin(req, res, next) {
+    if (!req.session.user) {
+      res.redirect("/login");
+    } else {
+      next();
+    }
+  }
+
+// access to a session object
+app.use(function(req, res, next) {
+    res.locals.session = req.session;
+    next();
+});
+
 
 app.use(function(req,res,next){
     let route = req.path.substring(1);
@@ -173,7 +199,7 @@ app.get('/blog/:id', async (req, res) => {
 });
 
 
-app.get('/posts',(req, res) => {
+app.get('/posts', ensureLogin,(req, res) => {
     //console.log(req)
     var category = req.query.category;
     var minDateStr = req.query.minDate;
@@ -221,7 +247,7 @@ app.get('/posts',(req, res) => {
 })
 
 
-app.get('/posts/add', (req, res) => {
+app.get('/posts/add', ensureLogin, (req, res) => {
     blog.getCategories().then((data) => {
         res.render('addPost',{
             categories: data
@@ -233,13 +259,13 @@ app.get('/posts/add', (req, res) => {
     })
 })
 
-app.get('/categories/add', (req, res) => {
+app.get('/categories/add', ensureLogin, (req, res) => {
     res.render('addCategory',{
         //options
     })
 })
 
-app.get('/categories/delete/:id', (req, res) => {
+app.get('/categories/delete/:id', ensureLogin, (req, res) => {
     var id = req.params.id
     blog.deleteCategoryById(id).then(() => {
         res.redirect('/categories')
@@ -248,7 +274,7 @@ app.get('/categories/delete/:id', (req, res) => {
     })
 })
 
-app.get('/posts/delete/:id', (req, res) => {
+app.get('/posts/delete/:id', ensureLogin, (req, res) => {
     var id = req.params.id
     blog.deletePostById(id).then(() => {
         res.redirect('/posts')
@@ -257,7 +283,7 @@ app.get('/posts/delete/:id', (req, res) => {
     })
 })
 
-app.get('/categories',(req, res) => {
+app.get('/categories', ensureLogin, (req, res) => {
     blog.getCategories().then((data) => {
         if (data.length > 0){
             res.render("categories",{
@@ -282,7 +308,7 @@ app.get('/error', (req, res) => {
     }) 
 }) 
 
-app.post('/categories/add', (req, res) => {
+app.post('/categories/add', ensureLogin, (req, res) => {
     blog.addCategory(req.body).then(() => {
         res.redirect('/categories')
     }).catch(()=>{
@@ -290,7 +316,7 @@ app.post('/categories/add', (req, res) => {
     })
 })
 
-app.post('/posts/add', upload.single('featureImage'), (req, res) => {
+app.post('/posts/add', ensureLogin, upload.single('featureImage'), (req, res) => {
     if(req.file){
     let streamUpload = (req) => {
         return new Promise((resolve, reject) => {
@@ -333,7 +359,7 @@ app.post('/posts/add', upload.single('featureImage'), (req, res) => {
     }
 })
 
-app.use('/posts/:id', (req, res, next) => {
+app.use('/posts/:id', ensureLogin, (req, res, next) => {
     var id = req.params.id
     blog.getPostById(id).then((data) => {
         res.send(data)
@@ -342,16 +368,64 @@ app.use('/posts/:id', (req, res, next) => {
     })
 })
 
+app.get("/login", function(req, res) {
+    res.render("login");
+})
+
+app.get("/register", function(req, res) {
+    res.render("register");
+})
+
+app.post("/register", (req, res) => {
+    authData.registerUser(req.body)
+    .then(() => {res.render("register", { 
+            successMessage: "User created",
+        })
+    }).catch((err) => {res.render("register", { 
+            errorMessage: err, 
+            userName: req.body.userName,
+        })
+    })
+}) 
+
+app.post("/login", (req, res) => {
+    req.body.userAgent = req.get('User-Agent')
+    authData.checkUser(req.body)
+    .then((user) => {
+        req.session.user = {
+            userName: user.userName, // authenticated user's userName
+            email: user.email,// authenticated user's email
+            loginHistory: user.loginHistory // authenticated user's loginHistory
+        }
+        res.redirect('/posts')
+    }).catch((err) => {res.render("login", { 
+            errorMessage: err, 
+            userName: req.body.userName,
+        })
+    })
+});
+
+app.get("/logout", function(req, res) {
+    req.session.reset();
+    res.redirect("/");
+});
+
+app.get("/userHistory", ensureLogin, function(req, res) {
+    res.render("userHistory");
+});
+
 app.use((req, res) => {
     res.status(404).redirect('/error')
 })
 
-blog.intialize().then(()=> {
+
+blog.intialize().then(authData.initialize)
+.then(()=> {
     app.listen(PORT, () => {
-        console.log(`Express http server listening on port ${PORT}`)
+        console.log(`App listening on port ${PORT}`)
     })
-}).catch(()=>{
-    console.log('No results returned');
+}).catch((err)=>{
+    console.log("unable to start server: " + err)
 })
 
 
